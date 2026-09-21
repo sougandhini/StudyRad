@@ -11,6 +11,14 @@
     <body>
         {% include 'navbar.html' %} 
 
+        <!-- here we are trying to ouput the flash messages if there are any flash messages present -->
+        {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li>{{message}}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
         {% block content %}
 
         {% endblock%} 

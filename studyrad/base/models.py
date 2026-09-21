@@ -31,7 +31,7 @@ class Room(models.Model):
 
 class Message(models.Model): # 1:n relationship model
     user = models.ForeignKey(User, on_delete=models.CASCADE) #currently using default django model
-    room = models.ForeignKey(Room, on_delete=models.CASCADE) #when a room is deleted, delete all msg 
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='messages') #when a room is deleted, delete all msg 
     body = models.TextField()
     updated = models.DateTimeField(auto_now=True)
     created = models.DateTimeField(auto_now_add=True)
