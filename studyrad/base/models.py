@@ -16,7 +16,7 @@ class Room(models.Model):
     topic =models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True) #1 room 1 topic
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True) #null is for DB, and blank is for a form
-    # participants = 
+    participants = models.ManyToManyField(User, related_name='participants', blank=True)
     updated = models.DateTimeField(auto_now=True) #so everytime the save method is called, update this field
     created = models.DateTimeField(auto_now_add=True) #timestamp is created when we first create this instance, so updation in this
     

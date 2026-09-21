@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import Room, Topic, Message
-from .forms import RoomForm
+from .forms import RoomForm, MessageForm
 from django.db.models import Count
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -78,13 +78,18 @@ def home(request):
     SQL: SELECT room.topic FROM room GROUP BY room.topic ORDER BY count(room.id) DESC;
     '''
     topics = Topic.objects.annotate(room_count=Count("room")).order_by('-room_count')
-    context = {'rooms': rooms, 'topics':topics, 'room_count':room_count} #this is for passing data to my response
+    
+    # now we're adding recent activities
+    participant_messages = Message.objects.filter(Q(room__topic__name__icontains=q)).order_by('-created')
+    context = {'rooms': rooms, 'topics':topics, 'room_count':room_count, 'activities':participant_messages} #this is for passing data to my response
     return render(request, 'base/home.html', context)
 
 # Read
 def room(request, pk):
     room = Room.objects.get(id=pk)
     room_messages = room.messages.all().order_by('-created') #reverse fk used here
+    '''Note: here messages are stored in message, but room is a fk in msg, so access all msg based on room is what we're trying to say'''
+    participants = room.participants.all()
     
     
     if request.method == 'POST':
@@ -93,11 +98,30 @@ def room(request, pk):
             room = room,
             body = request.POST.get('body')
         )
+        
+        room.participants.add(request.user)
         # if we dont do this also, the page will work, but problem is the post without any redirect operation may result in some complications
         return redirect('room',pk=room.id)
         
-    context = {'room': room, 'room_messages':room_messages}
+    context = {'room': room, 'room_messages':room_messages, 'participants':participants}
     return render(request, 'base/room.html', context)
+
+
+
+def user_profile(request, pk):
+    user = User.objects.get(id=pk)
+    room_messages = user.message_set.all()
+    topics = Topic.objects.all()
+    rooms = user.room_set.all() #passing only user's rooms
+    context = {'user':user, 
+               'rooms':rooms,
+               'room_messages':room_messages, 
+               'topics': topics, 
+               'activities': room_messages
+            }
+    return render(request, 'base/profile.html', context)
+
+
 
 # CRUD ON ROOMS 
 
@@ -134,7 +158,6 @@ def update_room(request, pk):
     return render(request, 'base/room_form.html', context)
 
 # Delete Room
-
 @login_required(login_url='login')
 def delete_room(request, pk):
     room = Room.objects.get(id=pk)
@@ -145,6 +168,36 @@ def delete_room(request, pk):
         room.delete()
         return redirect('home')
     return render(request, 'base/delete.html', {'obj':room})
+
+
+# Delete message
+@login_required(login_url='login')
+def delete_message(request, pk):
+    message = Message.objects.get(id=pk)
+    if request.user != message.user:
+        return HttpResponse("You're not authorised to delete this message")
+        
+    if request.method == 'POST': #coz we click on confirm
+        message.delete()
+        return redirect('home')
+    return render(request, 'base/delete.html', {'obj':message})
+
+
+@login_required
+def edit_message(request, pk):
+    # change this later to inhouse
+    message = Message.objects.get(id=pk)
+    form = MessageForm(instance=message)
+    if request.user != message.user:
+        return HttpResponse("You're not authorised to delete this message")
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST, instance=message) 
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+    context = {'form':form}
+    return render(request, 'base/room_form.html', context)
 
 
     
