@@ -17,3 +17,5 @@ messages can be shared between users in each room
 Search bar:
 towards left - based on topic
 up - based on any keyword
+
+Done with html skeleton component
