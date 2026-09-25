@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import Room, Topic, Message
-from .forms import RoomForm, MessageForm
+from .forms import RoomForm, MessageForm, UserForm
 from django.db.models import Count
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -71,13 +71,12 @@ def home(request):
     q = request.GET.get('q') if request.GET.get('q') != None else ''
     rooms = Room.objects.filter(Q(topic__name__icontains=q) | Q(name__icontains=q) | Q(description__icontains=q)) # here we will use a Q function 
     room_count = rooms.count()
-    
 
     # topics = Topic.objects.all() all the topics will be listed, but later change it to those topics which have highest number of rooms
     '''
     SQL: SELECT room.topic FROM room GROUP BY room.topic ORDER BY count(room.id) DESC;
     '''
-    topics = Topic.objects.annotate(room_count=Count("room")).order_by('-room_count')
+    topics = Topic.objects.annotate(room_count=Count("room")).order_by('-room_count')[:5] #room means the model Room
     
     # now we're adding recent activities
     participant_messages = Message.objects.filter(Q(room__topic__name__icontains=q)).order_by('-created')
@@ -128,14 +127,32 @@ def user_profile(request, pk):
 # Create Room only if user is logged in
 @login_required(login_url='login') #if a user is not logged in then he will be redirected to login
 def create_room(request):
-    if request.method == 'POST':
-        form = RoomForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('home')
-        
     form = RoomForm()
-    context = {'form':form}
+    topics = Topic.objects.all()
+        
+    if request.method == 'POST':
+        # form = RoomForm(request.POST)
+        topic_name = request.POST.get('topic')
+        topic, created = Topic.objects.get_or_create(name=topic_name)
+        
+        Room.objects.create(
+            host=request.user,
+            topic=topic,
+            name=request.POST.get('name'),
+            description=request.POST.get('description'),
+        )
+        
+        # we're not saving this using the conventional is_valid coz we have made a change to add a new topic if a topic is not found
+        
+        # if form.is_valid():
+        #     room = form.save(commit=False) # so this gives the instance of a room
+        #     room.host = request.user
+        #     room.save()
+        
+        return redirect('home')
+        
+    
+    context = {'form':form, 'topics':topics}
     return render(request, 'base/room_form.html', context)
 
 # Update Room
@@ -144,17 +161,25 @@ def create_room(request):
 def update_room(request, pk):
     room = Room.objects.get(id=pk)
     form = RoomForm(instance=room) #means hey prefill this form with the instance of room
+    topics = Topic.objects.all()
     
     # if a user is not the creater of that room, he should not delete the room
     if request.user != room.host:
         return HttpResponse("You're not authorised to update this room")
         
     if request.method=="POST":
-        form = RoomForm(request.POST, instance=room) #if we dont specify the value of instance it just creates a new instance rather than updating the current one
-        if form.is_valid():
-            form.save()
-            return redirect('home')
-    context = {'form':form}
+        topic_name = request.POST.get('topic')
+        topic, created = Topic.objects.get_or_create(name=topic_name)
+        room.name = request.POST.get('name')
+        room.description = request.POST.get('description')
+        room.topic = topic
+        room.save()
+        return redirect('home')
+        
+        
+        
+    
+    context = {'form':form, 'topics':topics, 'room':room}
     return render(request, 'base/room_form.html', context)
 
 # Delete Room
@@ -167,7 +192,8 @@ def delete_room(request, pk):
     if request.method == 'POST': #coz we click on confirm
         room.delete()
         return redirect('home')
-    return render(request, 'base/delete.html', {'obj':room})
+    context  = {'obj':room, 'obj_type': room._meta.verbose_name}
+    return render(request, 'base/delete.html', context)
 
 
 # Delete message
@@ -180,10 +206,11 @@ def delete_message(request, pk):
     if request.method == 'POST': #coz we click on confirm
         message.delete()
         return redirect('home')
-    return render(request, 'base/delete.html', {'obj':message})
+    context = {'obj': message, 'obj_type': message._meta.verbose_name}
+    return render(request, 'base/delete.html', context)
 
 
-@login_required
+@login_required(login_url='login')
 def edit_message(request, pk):
     # change this later to inhouse
     message = Message.objects.get(id=pk)
@@ -200,4 +227,34 @@ def edit_message(request, pk):
     return render(request, 'base/room_form.html', context)
 
 
+
+# Update user-profile
+@login_required(login_url='login')
+def update_user(request):
+    # the user is already logged in so no need to pass pk
+    
+    user = request.user
+    form = UserForm(instance=user)
+    if request.method == "POST":
+        form = UserForm(request.POST, instance=user)
+        if form.is_valid:
+            form.save()
+            return redirect('user-profile',pk=user.id)
+        
+    
+    context = {'form':form}
+    return render(request, 'base/update-user.html', context)
+
+
+def topics_page(request):
+    q = request.GET.get('q') if request.GET.get('q') != None else ''
+    
+    topics = Topic.objects.filter(name__icontains=q)
+    context = {'topics': topics}
+    return render(request,'base/topics.html',context)
+
+def activities_page(request):
+    room_messages = Message.objects.all()[:3]
+    context = {'activities':room_messages}
+    return render(request, 'base/activity.html', context)
     
