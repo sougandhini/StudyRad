@@ -1,14 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .models import Room, Topic, Message
-from .forms import RoomForm, MessageForm, UserForm
+from .models import Room, Topic, Message, User
+from .forms import RoomForm, MessageForm, UserForm, MyUserCreationForm
 from django.db.models import Count
 from django.db.models import Q
-from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
-from django.contrib.auth.forms import UserCreationForm
 
 # Create your views here.
 
@@ -39,7 +37,7 @@ def login_page(request):
             login(request, user) #this login will add that user session to DB and also in cookies
             return redirect('home')
         else:
-            messages.error(request, 'Username or Password does not exist')
+            messages.error(request, 'username or Password does not exist')
     context={'page':page}
     return render(request, 'base/login_register.html', context)
 
@@ -48,10 +46,10 @@ def logout_user(request):
     return redirect('home')
     
 def register_user(request):
-    form = UserCreationForm
+    form = MyUserCreationForm
     
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = MyUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False) # this is to say that, hey check if its valid, if so currently freeze, why? coz to CLEAN DATA: ensure consistency in storing like if they capitalised name or full lower case something like that
             
@@ -236,8 +234,8 @@ def update_user(request):
     user = request.user
     form = UserForm(instance=user)
     if request.method == "POST":
-        form = UserForm(request.POST, instance=user)
-        if form.is_valid:
+        form = UserForm(request.POST,request.FILES,instance=user)
+        if form.is_valid():
             form.save()
             return redirect('user-profile',pk=user.id)
         

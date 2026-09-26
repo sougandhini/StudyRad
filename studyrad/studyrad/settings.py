@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'corsheaders',
 ]
 
+AUTH_USER_MODEL = 'base.User'
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -128,7 +130,9 @@ STATICFILES_DIRS = [
 
 # STATIC_ROOT : this is for what a user uploads
 
-
+# for user uploaded content
+MEDIA_ROOT = BASE_DIR/'static/images'
+MEDIA_URL = '/image/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
