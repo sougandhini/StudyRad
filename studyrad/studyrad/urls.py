@@ -20,5 +20,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('base.urls')) #so whenever you encounter '', please include the urls present in base.urls for your search in urls
+    path('', include('base.urls')), #so whenever you encounter '', please include the urls present in base.urls for your search in urls
+    path('studyrad/', include('base.api.urls'))
 ]
