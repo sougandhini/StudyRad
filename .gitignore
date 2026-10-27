@@ -1,3 +1,6 @@
 myReadMe.md 
 **/__pycache__/
 *.py[cod]
+theme
+**/db.sqlite3
+.env
