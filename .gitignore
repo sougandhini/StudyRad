@@ -1,6 +1,10 @@
 myReadMe.md 
-**/__pycache__/
 *.py[cod]
 theme
-**/db.sqlite3
+db.sqlite3
 .env
+.myvenv/
+__pycache__/
+htmlcov/
+coverage.xml
+.pytest_cache/
